@@ -1,0 +1,31 @@
+package com.rbac.auth.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import com.rbac.auth.service.InvitationService;
+
+@RestController
+@RequestMapping("/api/invite")
+@CrossOrigin(origins = "http://localhost:5173")
+public class InvitationController {
+
+    @Autowired
+    private InvitationService service;
+
+    @PostMapping("/send")
+    public String send(
+            @RequestParam String email,
+            @RequestParam Long teamId,
+            Authentication auth
+    ) {
+        return service.sendInvite(email, auth.getName(), teamId);
+    }
+
+    @PostMapping("/accept")
+    public String accept(@RequestParam String token) {
+        service.acceptInvite(token);
+        return "Invitation Accepted ✅";
+    }
+}

@@ -1,0 +1,36 @@
+package com.rbac.auth.entity;
+
+import jakarta.persistence.*;
+import java.util.List;
+
+@Entity
+public class Team {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+    private String domain;
+
+    @ManyToOne
+    private User manager;
+
+    // ✅ MEMBERS FEATURE
+    @ManyToMany
+    private List<User> members;
+
+    public Long getId() { return id; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public String getDomain() { return domain; }
+    public void setDomain(String domain) { this.domain = domain; }
+
+    public User getManager() { return manager; }
+    public void setManager(User manager) { this.manager = manager; }
+
+    public List<User> getMembers() { return members; }
+    public void setMembers(List<User> members) { this.members = members; }
+}
