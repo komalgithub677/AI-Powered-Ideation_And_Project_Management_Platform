@@ -1,80 +1,133 @@
 // src/components/IdeaGeneration.jsx
+
 import { useState } from "react";
-import axios from "axios";
 
 export default function IdeaGeneration({ user }) {
   const [domain, setDomain] = useState("");
   const [project, setProject] = useState("");
   const [ideas, setIdeas] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleGenerate = async () => {
-    if (!domain.trim() || !project.trim()) return;
+  const handleGenerate = () => {
+    setError("");
+    setIdeas([]);
 
-    setLoading(true);
+    if (!domain.trim() || !project.trim()) {
+      setError("Please enter both Domain and Project Title.");
+      return;
+    }
+
+    const generatedIdeas = [
+      `AI-Powered ${project} Management System for ${domain}`,
+      `Smart ${domain} Analytics Dashboard using Machine Learning`,
+      `${project} Collaboration and Workflow Platform`,
+      `Real-Time ${domain} Monitoring and Alert System`,
+      `${project} Recommendation Engine using AI`,
+      `Cloud-Based ${project} Management Portal`,
+      `${project} Automation System with Intelligent Insights`,
+      `Predictive Analytics Solution for ${domain}`,
+      `Mobile Application for ${project} Tracking and Management`,
+      `Data-Driven Decision Support System for ${domain}`,
+    ];
+
+    setIdeas(generatedIdeas);
+  };
+
+  const handleReset = () => {
+    setDomain("");
+    setProject("");
     setIdeas([]);
     setError("");
-
-    try {
-      const res = await axios.post("http://localhost:5000/api/idea", {
-        domain,
-        project,
-      });
-
-      // Assuming Gemini returns a single string, split by line breaks
-      const generatedIdeas = res.data.ideas.split("\n").filter((i) => i.trim());
-      setIdeas(generatedIdeas);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to generate ideas. Please try again.");
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
-    <div className="p-6 bg-white rounded-2xl shadow-lg">
-      <h2 className="text-2xl font-bold mb-4">Idea Generation</h2>
+    <div className="max-w-4xl mx-auto p-6 bg-white rounded-2xl shadow-lg">
+      <h2 className="text-3xl font-bold text-gray-800 mb-2">
+        Idea Generation
+      </h2>
 
-      <div className="space-y-3 mb-4">
-        <input
-          type="text"
-          placeholder="Enter domain (e.g., Healthcare, AI, Education)"
-          value={domain}
-          onChange={(e) => setDomain(e.target.value)}
-          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-        />
-        <input
-          type="text"
-          placeholder="Project title"
-          value={project}
-          onChange={(e) => setProject(e.target.value)}
-          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-        />
-        <button
-          onClick={handleGenerate}
-          disabled={loading}
-          className={`w-full py-3 rounded-lg text-white font-semibold transition ${
-            loading
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-blue-600 hover:bg-blue-700"
-          }`}
-        >
-          {loading ? "Generating..." : "Generate Ideas"}
-        </button>
+      <p className="text-gray-600 mb-6">
+        Enter a domain and project title to generate innovative project ideas.
+      </p>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-gray-700 font-medium mb-2">
+            Domain
+          </label>
+          <input
+            type="text"
+            placeholder="e.g. Healthcare, AI, Education, Finance"
+            value={domain}
+            onChange={(e) => setDomain(e.target.value)}
+            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="block text-gray-700 font-medium mb-2">
+            Project Title
+          </label>
+          <input
+            type="text"
+            placeholder="Enter project title"
+            value={project}
+            onChange={(e) => setProject(e.target.value)}
+            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+          />
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={handleGenerate}
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition"
+          >
+            Generate Ideas
+          </button>
+
+          <button
+            onClick={handleReset}
+            className="px-6 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-3 rounded-lg transition"
+          >
+            Reset
+          </button>
+        </div>
       </div>
 
-      {error && <p className="text-red-500 mb-2">{error}</p>}
+      {error && (
+        <div className="mt-5 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+          {error}
+        </div>
+      )}
 
       {ideas.length > 0 && (
-        <div className="mt-4">
-          <h3 className="text-lg font-semibold mb-2">Generated Ideas:</h3>
-          <ul className="list-disc list-inside space-y-1">
-            {ideas.map((idea, idx) => (
-              <li key={idx}>{idea}</li>
+        <div className="mt-8">
+          <h3 className="text-xl font-semibold text-gray-800 mb-4">
+            Generated Ideas
+          </h3>
+
+          <div className="grid gap-4">
+            {ideas.map((idea, index) => (
+              <div
+                key={index}
+                className="p-4 border rounded-xl bg-gray-50 hover:shadow-md transition"
+              >
+                <div className="flex items-start gap-3">
+                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white font-bold">
+                    {index + 1}
+                  </span>
+
+                  <p className="text-gray-700 font-medium">{idea}</p>
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
+        </div>
+      )}
+
+      {ideas.length === 0 && !error && (
+        <div className="mt-8 p-6 text-center border-2 border-dashed rounded-xl text-gray-500">
+          Enter project details and click "Generate Ideas" to see suggestions.
         </div>
       )}
     </div>

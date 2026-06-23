@@ -1,12 +1,21 @@
 package com.rbac.auth.controller;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import com.rbac.auth.dto.LoginRequest;
 import com.rbac.auth.dto.LoginResponse;
+import com.rbac.auth.dto.ProfileResponse;
 import com.rbac.auth.dto.RegisterRequest;
+import com.rbac.auth.entity.Team;
 import com.rbac.auth.entity.User;
+import com.rbac.auth.repository.NotificationRepository;
+import com.rbac.auth.repository.TaskRepository;
+import com.rbac.auth.repository.TeamRepository;
+import com.rbac.auth.repository.UserRepository;
 import com.rbac.auth.service.UserService;
 
 @RestController
@@ -17,15 +26,83 @@ public class UserController {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private TeamRepository teamRepository;
+
+    @Autowired
+    private TaskRepository taskRepository;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
+
     // ================= REGISTER =================
+
     @PostMapping("/register")
     public User register(@RequestBody RegisterRequest request) {
         return userService.registerUser(request);
     }
 
     // ================= LOGIN =================
+
     @PostMapping("/login")
     public LoginResponse login(@RequestBody LoginRequest request) {
         return userService.login(request);
+    }
+
+    // ================= PROFILE =================
+
+    @GetMapping("/profile")
+    public ProfileResponse getProfile(Authentication authentication) {
+
+        String email = authentication.getName();
+
+        User user = userRepository.findByEmail(email);
+
+        if (user == null) {
+            throw new RuntimeException("User not found");
+        }
+
+        List<Team> teams = teamRepository.findByManager(user);
+
+        String teamName = "No Team";
+        String teamDomain = "-";
+        int teamMembersCount = 0;
+
+        if (!teams.isEmpty()) {
+
+            Team team = teams.get(0);
+
+            teamName = team.getName();
+            teamDomain = team.getDomain();
+
+            if (team.getMembers() != null) {
+                teamMembersCount = team.getMembers().size();
+            }
+        }
+
+        int assignedTasksCount =
+                (int) taskRepository.countByAssignedToEmail(email);
+
+        int createdTasksCount =
+                (int) taskRepository.countByCreatedByEmail(email);
+
+        int notificationsCount =
+                (int) notificationRepository.countByUserEmail(email);
+
+        return new ProfileResponse(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getRole().name(),
+                teamName,
+                teamDomain,
+                teamMembersCount,
+                assignedTasksCount,
+                createdTasksCount,
+                notificationsCount
+        );
     }
 }

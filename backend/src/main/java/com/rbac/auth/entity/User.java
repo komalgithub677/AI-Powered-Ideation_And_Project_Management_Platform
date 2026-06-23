@@ -1,5 +1,9 @@
 package com.rbac.auth.entity;
 
+import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.*;
 
 @Entity
@@ -20,14 +24,121 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Role role;
 
-    // getters & setters
-    public Long getId() { return id; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
-    public Role getRole() { return role; }
-    public void setRole(Role role) { this.role = role; }
+    // =========================
+    // MANAGED TEAMS
+    // =========================
+
+    @OneToMany(mappedBy = "manager")
+    @JsonIgnore
+    private List<Team> managedTeams;
+
+    // =========================
+    // ASSIGNED TASKS
+    // =========================
+
+    @OneToMany(mappedBy = "assignedTo")
+    @JsonIgnore
+    private List<Task> assignedTasks;
+
+    // =========================
+    // CREATED TASKS
+    // =========================
+
+    @OneToMany(mappedBy = "createdBy")
+    @JsonIgnore
+    private List<Task> createdTasks;
+
+    // =========================
+    // NOTIFICATIONS
+    // =========================
+
+    @OneToMany(mappedBy = "user")
+    @JsonIgnore
+    private List<Notification> notifications;
+
+    // =========================
+    // CONSTRUCTORS
+    // =========================
+
+    public User() {
+    }
+
+    public User(String name, String email, String password, Role role) {
+        this.name = name;
+        this.email = email;
+        this.password = password;
+        this.role = role;
+    }
+
+    // =========================
+    // GETTERS & SETTERS
+    // =========================
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
+    }
+
+    public List<Team> getManagedTeams() {
+        return managedTeams;
+    }
+
+    public void setManagedTeams(List<Team> managedTeams) {
+        this.managedTeams = managedTeams;
+    }
+
+    public List<Task> getAssignedTasks() {
+        return assignedTasks;
+    }
+
+    public void setAssignedTasks(List<Task> assignedTasks) {
+        this.assignedTasks = assignedTasks;
+    }
+
+    public List<Task> getCreatedTasks() {
+        return createdTasks;
+    }
+
+    public void setCreatedTasks(List<Task> createdTasks) {
+        this.createdTasks = createdTasks;
+    }
+
+    public List<Notification> getNotifications() {
+        return notifications;
+    }
+
+    public void setNotifications(List<Notification> notifications) {
+        this.notifications = notifications;
+    }
 }

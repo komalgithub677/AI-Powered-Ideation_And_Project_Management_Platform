@@ -9,8 +9,10 @@ import com.rbac.auth.dto.LoginResponse;
 import com.rbac.auth.dto.RegisterRequest;
 import com.rbac.auth.entity.Invitation;
 import com.rbac.auth.entity.Role;
+import com.rbac.auth.entity.Team;
 import com.rbac.auth.entity.User;
 import com.rbac.auth.repository.InvitationRepository;
+import com.rbac.auth.repository.TeamRepository;
 import com.rbac.auth.repository.UserRepository;
 import com.rbac.auth.security.JwtService;
 
@@ -24,6 +26,9 @@ public class UserService {
     private InvitationRepository invitationRepository;
 
     @Autowired
+    private TeamRepository teamRepository;
+
+    @Autowired
     private JwtService jwtService;
 
     @Autowired
@@ -32,83 +37,121 @@ public class UserService {
     // ================= REGISTER =================
     public User registerUser(RegisterRequest request) {
 
-        // ✅ 1. Validate role
+        // Validate role
         if (request.getRole() == null) {
             throw new RuntimeException("Please select a role");
         }
 
-        // ✅ 2. Prevent duplicate users
+        // Prevent duplicate email
         if (userRepository.findByEmail(request.getEmail()) != null) {
             throw new RuntimeException("User already exists with this email");
         }
 
         // ============================
-        // ✅ PROJECT MANAGER SIGNUP
+        // PROJECT MANAGER SIGNUP
         // ============================
         if (request.getRole() == Role.PROJECT_MANAGER) {
 
             User manager = new User();
+
             manager.setName(request.getName());
             manager.setEmail(request.getEmail());
-            manager.setPassword(passwordEncoder.encode(request.getPassword()));
+            manager.setPassword(
+                    passwordEncoder.encode(request.getPassword())
+            );
             manager.setRole(Role.PROJECT_MANAGER);
 
             return userRepository.save(manager);
         }
 
         // ============================
-        // ✅ USER SIGNUP (INVITE BASED)
+        // USER SIGNUP (INVITE BASED)
         // ============================
 
         Invitation inv = invitationRepository
-                .findTopByEmailAndUsedFalseOrderByIdDesc(request.getEmail())
+                .findTopByEmailAndUsedFalseOrderByIdDesc(
+                        request.getEmail()
+                )
                 .orElseThrow(() ->
-                        new RuntimeException("You are not invited. Please contact your manager.")
+                        new RuntimeException(
+                                "You are not invited. Please contact your manager."
+                        )
                 );
 
-        // ❌ Not accepted
+        // Invite not accepted
         if (!inv.isAccepted()) {
-            throw new RuntimeException("Please accept the invitation first.");
+            throw new RuntimeException(
+                    "Please accept the invitation first."
+            );
         }
 
-        // ❌ Already used (extra safety)
+        // Already used
         if (inv.isUsed()) {
-            throw new RuntimeException("Invitation already used.");
+            throw new RuntimeException(
+                    "Invitation already used."
+            );
         }
 
-        // ✅ Mark invitation used
+        // Mark invite used
         inv.setUsed(true);
         invitationRepository.save(inv);
 
-        // ✅ Create user
+        // Create user
         User user = new User();
+
         user.setName(request.getName());
         user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setPassword(
+                passwordEncoder.encode(request.getPassword())
+        );
         user.setRole(Role.USER);
 
-        return userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        // ============================
+        // ADD USER TO TEAM
+        // ============================
+
+        Team team = inv.getTeam();
+
+        if (team != null) {
+
+            if (!team.getMembers().contains(savedUser)) {
+
+                team.getMembers().add(savedUser);
+
+                teamRepository.save(team);
+            }
+        }
+
+        return savedUser;
     }
 
     // ================= LOGIN =================
     public LoginResponse login(LoginRequest request) {
 
-        User user = userRepository.findByEmail(request.getEmail());
+        User user = userRepository.findByEmail(
+                request.getEmail()
+        );
 
         if (user == null) {
             throw new RuntimeException("User not found");
         }
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+        if (!passwordEncoder.matches(
+                request.getPassword(),
+                user.getPassword()
+        )) {
             throw new RuntimeException("Invalid password");
         }
 
-        String token = jwtService.generateToken(user.getEmail());
+        String token =
+                jwtService.generateToken(user.getEmail());
 
         return new LoginResponse(
                 token,
                 user.getEmail(),
-                user.getRole().name() // ✅ already correct
+                user.getRole().name()
         );
     }
 }

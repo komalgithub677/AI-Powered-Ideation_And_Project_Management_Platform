@@ -1,3 +1,4 @@
+
 package com.rbac.auth.service;
 
 import java.util.UUID;
@@ -27,23 +28,44 @@ public class InvitationService {
     @Autowired
     private EmailService emailService;
 
-    // ✅ SEND INVITE (NO DUPLICATES)
-    public String sendInvite(String email, String managerEmail, Long teamId) {
+    // ================= SEND INVITE =================
 
-        User manager = userRepository.findByEmail(managerEmail);
-        if (manager == null) throw new RuntimeException("Manager not found");
+    public String sendInvite(
+            String email,
+            String managerEmail,
+            Long teamId
+    ) {
 
-        Team team = teamRepository.findById(teamId)
-                .orElseThrow(() -> new RuntimeException("Team not found"));
+        User manager =
+                userRepository.findByEmail(managerEmail);
 
-        // ✅ Check existing unused invite (LATEST)
-        if (repo.findTopByEmailAndUsedFalseOrderByIdDesc(email).isPresent()) {
-            throw new RuntimeException("User already invited");
+        if (manager == null) {
+            throw new RuntimeException(
+                    "Manager not found"
+            );
+        }
+
+        Team team =
+                teamRepository.findById(teamId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Team not found"
+                                ));
+
+        if (repo.findTopByEmailAndUsedFalseOrderByIdDesc(email)
+                .isPresent()) {
+
+            throw new RuntimeException(
+                    "User already invited"
+            );
         }
 
         Invitation inv = new Invitation();
+
         inv.setEmail(email);
-        inv.setToken(UUID.randomUUID().toString());
+        inv.setToken(
+                UUID.randomUUID().toString()
+        );
         inv.setAccepted(false);
         inv.setUsed(false);
         inv.setManager(manager);
@@ -51,22 +73,36 @@ public class InvitationService {
 
         repo.save(inv);
 
-        emailService.sendInviteEmail(email, inv.getToken());
+        emailService.sendInviteEmail(
+                email,
+                inv.getToken()
+        );
 
         return inv.getToken();
     }
 
-    // ✅ ACCEPT INVITE
-    public void acceptInvite(String token) {
+    // ================= ACCEPT INVITE =================
 
-        Invitation inv = repo.findByToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid token"));
+    public String acceptInvite(String token) {
+
+        Invitation inv =
+                repo.findByToken(token)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Invalid token"
+                                ));
 
         if (inv.isUsed()) {
-            throw new RuntimeException("Invite already used");
+            throw new RuntimeException(
+                    "Invite already used"
+            );
         }
 
         inv.setAccepted(true);
+
         repo.save(inv);
+
+        return inv.getEmail();
     }
 }
+

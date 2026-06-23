@@ -1,87 +1,101 @@
-import React, { createContext, useState, useContext, useEffect } from "react";
+
+import React, {
+  createContext,
+  useContext,
+  useState,
+} from "react";
 import axios from "axios";
-import io from "socket.io-client";
 
 const AuthContext = createContext();
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () =>
+  useContext(AuthContext);
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [socket, setSocket] = useState(null);
+export const AuthProvider = ({
+  children,
+}) => {
 
-  // ✅ Shared helper for login & signup
-  const setAuthData = (token, userData) => {
-    // Save token
-    localStorage.setItem("token", token);
-    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+  const [user, setUser] =
+    useState(
+      JSON.parse(
+        localStorage.getItem("user")
+      )
+    );
 
-    // Save user
+  const [token, setToken] =
+    useState(
+      localStorage.getItem("token")
+    );
+
+  const setAuthData = (
+    jwtToken,
+    userData
+  ) => {
+
+    localStorage.setItem(
+      "token",
+      jwtToken
+    );
+
+    localStorage.setItem(
+      "user",
+      JSON.stringify(userData)
+    );
+
+    axios.defaults.headers.common[
+      "Authorization"
+    ] = `Bearer ${jwtToken}`;
+
+    setToken(jwtToken);
     setUser(userData);
-
-    // Connect socket (if not already connected)
-    if (!socket) {
-      const newSocket = io("http://localhost:5000");
-      newSocket.emit("join", userData._id); // use MongoDB _id
-      setSocket(newSocket);
-    }
   };
 
-  // ✅ Login
-  const login = async (email, password) => {
-    try {
-      const res = await axios.post("http://localhost:5000/api/auth/login", {
-        email,
-        password,
-      });
+  const clearAuth = () => {
 
-      const { token, user } = res.data;
-      setAuthData(token, user);
+    delete axios.defaults.headers.common[
+      "Authorization"
+    ];
 
-      return res.data;
-    } catch (err) {
-      throw err;
-    }
-  };
+    localStorage.removeItem(
+      "token"
+    );
 
-  // ✅ Logout
-  const logout = () => {
-    localStorage.removeItem("token");
-    delete axios.defaults.headers.common["Authorization"];
+    localStorage.removeItem(
+      "user"
+    );
+
     setUser(null);
-    if (socket) {
-      socket.disconnect();
-      setSocket(null);
-    }
+    setToken(null);
   };
 
-  // ✅ On initial load, check token & fetch user
-  useEffect(() => {
-    const token = localStorage.getItem("token");
+  const logout = () => {
+    localStorage.clear();
 
-    if (token) {
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    delete axios.defaults.headers.common[
+      "Authorization"
+    ];
 
-      axios
-        .get("http://localhost:5000/api/auth/me")
-        .then((res) => {
-          setUser(res.data);
+    setUser(null);
+    setToken(null);
+  };
 
-          if (!socket) {
-            const newSocket = io("http://localhost:5000");
-            newSocket.emit("join", res.data._id);
-            setSocket(newSocket);
-          }
-        })
-        .catch(() => {
-          logout();
-        });
-    }
-  }, []); // run once on mount
+  const isManager =
+    user?.role ===
+    "PROJECT_MANAGER";
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, setAuthData, socket }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        logout,
+        clearAuth,
+        setAuthData,
+        isManager,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
+

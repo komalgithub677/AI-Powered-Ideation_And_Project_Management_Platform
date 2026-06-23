@@ -1,5 +1,8 @@
 package com.rbac.auth.service;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -7,8 +10,6 @@ import com.rbac.auth.entity.Team;
 import com.rbac.auth.entity.User;
 import com.rbac.auth.repository.TeamRepository;
 import com.rbac.auth.repository.UserRepository;
-
-import java.util.List;
 
 @Service
 public class TeamService {
@@ -19,25 +20,49 @@ public class TeamService {
     @Autowired
     private UserRepository userRepo;
 
-    public Team createTeam(String name, String domain, String managerEmail) {
+    public Team createTeam(
+            String name,
+            String domain,
+            String managerEmail
+    ) {
 
-        User manager = userRepo.findByEmail(managerEmail);
+        User manager =
+                userRepo.findByEmail(managerEmail);
+
+        if (manager == null) {
+            throw new RuntimeException(
+                    "Manager not found"
+            );
+        }
 
         Team team = new Team();
+
         team.setName(name);
         team.setDomain(domain);
         team.setManager(manager);
 
+        // initialize members list
+        team.setMembers(new ArrayList<>());
+
         return teamRepo.save(team);
     }
 
-    public List<Team> getTeams(String managerEmail) {
-        return teamRepo.findByManagerEmail(managerEmail);
+    public List<Team> getTeams(
+            String managerEmail
+    ) {
+
+        return teamRepo.findByManagerEmail(
+                managerEmail
+        );
     }
 
-    // ✅ NEW
     public Team getTeamById(Long id) {
+
         return teamRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Team not found"));
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Team not found"
+                        )
+                );
     }
 }

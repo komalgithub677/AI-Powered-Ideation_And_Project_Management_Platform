@@ -1,11 +1,16 @@
-// src/components/Navbar.jsx
+import { useAuth } from "../context/AuthContext";
+
 export default function Navbar() {
+  const { user } = useAuth();
+
   return (
-    <nav className="bg-white shadow-lg flex-1">
-      <div className="max-w-7xl mx-auto px-6 py-4 flex justify-center">
-        <h1 className="text-2xl md:text-3xl font-extrabold text-gray-800 tracking-wide text-center">
-          AI-Powered Ideation & Project Management Platform
-        </h1>
+    <nav className="bg-white shadow px-6 py-4 flex justify-between">
+      <h1 className="font-bold text-xl">
+        AI-Powered Ideation Platform
+      </h1>
+
+      <div>
+        {user?.email}
       </div>
     </nav>
   );

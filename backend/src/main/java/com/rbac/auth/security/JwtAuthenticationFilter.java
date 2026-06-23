@@ -29,41 +29,77 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private UserRepository userRepository;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest req,
-                                   HttpServletResponse res,
-                                   FilterChain chain)
+    protected void doFilterInternal(
+            HttpServletRequest req,
+            HttpServletResponse res,
+            FilterChain chain)
             throws ServletException, IOException {
+
+        String uri = req.getRequestURI();
+
+        // ============================
+        // SKIP WEBSOCKET REQUESTS
+        // ============================
+
+        if (uri.startsWith("/ws")) {
+            chain.doFilter(req, res);
+            return;
+        }
 
         String header = req.getHeader("Authorization");
 
-        if (header != null && header.startsWith("Bearer ")
-                && SecurityContextHolder.getContext().getAuthentication() == null) {
+        if (header == null || !header.startsWith("Bearer ")) {
+            chain.doFilter(req, res);
+            return;
+        }
+
+        try {
 
             String token = header.substring(7);
 
-            if (jwtService.validateToken(token)) {
-
-                String email = jwtService.extractEmail(token);
-
-                User user = userRepository.findByEmail(email);
-
-                if (user != null) {
-
-                    // ✅ FIX: use .name()
-                    String role = "ROLE_" + user.getRole().name();
-
-                    UsernamePasswordAuthenticationToken auth =
-                            new UsernamePasswordAuthenticationToken(
-                                    email,
-                                    null,
-                                    List.of(new SimpleGrantedAuthority(role))
-                            );
-
-                    auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(req));
-
-                    SecurityContextHolder.getContext().setAuthentication(auth);
-                }
+            if (!jwtService.validateToken(token)) {
+                chain.doFilter(req, res);
+                return;
             }
+
+            String email =
+                    jwtService.extractEmail(token);
+
+            User user =
+                    userRepository.findByEmail(email);
+
+            if (user != null
+                    && SecurityContextHolder
+                    .getContext()
+                    .getAuthentication() == null) {
+
+                String role =
+                        "ROLE_" + user.getRole().name();
+
+                UsernamePasswordAuthenticationToken auth =
+                        new UsernamePasswordAuthenticationToken(
+                                email,
+                                null,
+                                List.of(
+                                        new SimpleGrantedAuthority(role)
+                                )
+                        );
+
+                auth.setDetails(
+                        new WebAuthenticationDetailsSource()
+                                .buildDetails(req)
+                );
+
+                SecurityContextHolder
+                        .getContext()
+                        .setAuthentication(auth);
+            }
+
+        } catch (Exception e) {
+
+            System.out.println(
+                    "JWT ERROR: " + e.getMessage()
+            );
         }
 
         chain.doFilter(req, res);

@@ -1,55 +1,130 @@
-// src/components/Teams.jsx
-import React, { useState, forwardRef, useImperativeHandle, useEffect } from "react";
+import React, {
+  useState,
+  useEffect,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import axios from "axios";
 
 const Teams = forwardRef(({ onTeamSelect }, ref) => {
   const [teams, setTeams] = useState([]);
   const [name, setName] = useState("");
   const [domain, setDomain] = useState("");
-  const [members, setMembers] = useState(""); // comma-separated emails
-  const [loading, setLoading] = useState(false);
+  const [members, setMembers] = useState("");
 
-  // Fetch all teams from backend
+  const [loading, setLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
+
+  const token = localStorage.getItem("token");
+
+  const user = JSON.parse(
+    localStorage.getItem("user") || "{}"
+  );
+
+  const isManager =
+    user?.role === "PROJECT_MANAGER";
+
+  // ==========================
+  // FETCH TEAMS
+  // ==========================
+
   const fetchTeams = async () => {
     try {
+      if (!token) return;
+
       setLoading(true);
-      const res = await axios.get("http://localhost:5000/api/teams");
-      setTeams(res.data);
+
+      const res = await axios.get(
+        "http://localhost:8080/api/manager/teams",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      console.log("Teams Loaded:", res.data);
+
+      setTeams(res.data || []);
     } catch (err) {
-      console.error("Error fetching teams:", err);
+      console.error(
+        "Fetch Teams Error:",
+        err
+      );
+
+      console.log(
+        "STATUS:",
+        err.response?.status
+      );
+
+      console.log(
+        "DATA:",
+        err.response?.data
+      );
+
+      setTeams([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Create a new team
-  const handleCreateTeam = async () => {
-    if (!name.trim()) return;
+  // ==========================
+  // CREATE TEAM
+  // ==========================
 
-    const membersArray = members
-      .split(",")
-      .map((m) => m.trim())
-      .filter((m) => m);
+  const handleCreateTeam = async () => {
+    if (!name.trim()) {
+      alert("Team name is required");
+      return;
+    }
 
     try {
-      const res = await axios.post("http://localhost:5000/api/teams", {
-        name,
-        domain,
-        members: membersArray,
-      });
+      setCreating(true);
 
-      // Add team to state so it shows immediately
-      setTeams((prev) => [...prev, res.data]);
+      const membersArray = members
+        .split(",")
+        .map((m) => m.trim())
+        .filter(Boolean);
 
-      // Reset input fields
+      const res = await axios.post(
+        "http://localhost:8080/api/manager/teams",
+        {
+          name,
+          domain,
+          members: membersArray,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
       setName("");
       setDomain("");
       setMembers("");
 
-      // Auto-select created team for dashboard
-      if (onTeamSelect) onTeamSelect(res.data);
+      alert(
+        "Team created successfully. Invitations sent."
+      );
+
+      await fetchTeams();
+
+      if (onTeamSelect) {
+        onTeamSelect(res.data);
+      }
     } catch (err) {
-      console.error("Error creating team:", err);
+      console.error(
+        "Create Team Error:",
+        err
+      );
+
+      alert(
+        err.response?.data ||
+          "Failed to create team"
+      );
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -58,68 +133,126 @@ const Teams = forwardRef(({ onTeamSelect }, ref) => {
   }));
 
   useEffect(() => {
-    fetchTeams();
-  }, []);
+    if (isManager) {
+      fetchTeams();
+    }
+  }, [isManager]);
+
+  // ==========================
+  // TEAM MEMBER VIEW
+  // ==========================
+
+  if (!isManager) {
+    return (
+      <div className="bg-white rounded-2xl shadow-lg p-6">
+        <h2 className="text-xl font-bold mb-4">
+          My Team
+        </h2>
+
+        <p className="text-gray-500">
+          Team information will appear here.
+        </p>
+      </div>
+    );
+  }
+
+  // ==========================
+  // PROJECT MANAGER VIEW
+  // ==========================
 
   return (
-    <div className="p-8 space-y-8">
-      {/* Create Team Section */}
-      <section className="bg-white rounded-2xl shadow-lg p-6">
-        <h2 className="text-xl font-bold mb-4">Create a New Team</h2>
-        <input
-          type="text"
-          placeholder="Team Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="border p-2 rounded w-full mb-2"
-        />
-        <input
-          type="text"
-          placeholder="Domain"
-          value={domain}
-          onChange={(e) => setDomain(e.target.value)}
-          className="border p-2 rounded w-full mb-2"
-        />
-        <input
-          type="text"
-          placeholder="Members (comma separated emails)"
-          value={members}
-          onChange={(e) => setMembers(e.target.value)}
-          className="border p-2 rounded w-full mb-3"
-        />
-        <button
-          onClick={handleCreateTeam}
-          className="bg-blue-600 text-white px-6 py-2 rounded-lg shadow hover:opacity-90"
-        >
-          Create Team
-        </button>
-      </section>
+    <div className="space-y-6">
 
-      {/* Team List Section */}
-      <section>
-        <h2 className="text-xl font-bold mb-4">Your Teams</h2>
+      {/* Create Team */}
+
+      <div className="bg-white rounded-2xl shadow-lg p-6">
+        <h2 className="text-xl font-bold mb-5">
+          Create Team
+        </h2>
+
+        <div className="space-y-3">
+          <input
+            type="text"
+            placeholder="Team Name"
+            value={name}
+            onChange={(e) =>
+              setName(e.target.value)
+            }
+            className="w-full border rounded-lg p-3"
+          />
+
+          <input
+            type="text"
+            placeholder="Domain"
+            value={domain}
+            onChange={(e) =>
+              setDomain(e.target.value)
+            }
+            className="w-full border rounded-lg p-3"
+          />
+
+          <textarea
+            rows={4}
+            value={members}
+            placeholder="member1@gmail.com, member2@gmail.com"
+            onChange={(e) =>
+              setMembers(e.target.value)
+            }
+            className="w-full border rounded-lg p-3"
+          />
+
+          <button
+            onClick={handleCreateTeam}
+            disabled={creating}
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+          >
+            {creating
+              ? "Creating..."
+              : "Create Team & Send Invites"}
+          </button>
+        </div>
+      </div>
+
+      {/* Teams List */}
+
+      <div className="bg-white rounded-2xl shadow-lg p-6">
+        <h2 className="text-xl font-bold mb-4">
+          My Teams
+        </h2>
+
         {loading ? (
-          <p className="text-gray-500">Loading teams...</p>
+          <p>Loading teams...</p>
         ) : teams.length === 0 ? (
-          <p className="text-gray-500">No teams created yet.</p>
+          <p className="text-gray-500">
+            No teams found
+          </p>
         ) : (
           <div className="space-y-3">
             {teams.map((team) => (
               <div
-                key={team._id}
-                onClick={() => onTeamSelect?.(team)}
-                className="p-4 border rounded-lg cursor-pointer bg-white hover:bg-gray-50"
+                key={team.id}
+                onClick={() =>
+                  onTeamSelect?.(team)
+                }
+                className="border rounded-xl p-4 cursor-pointer hover:bg-gray-50 transition"
               >
-                <h3 className="font-semibold">{team.name}</h3>
-                <p className="text-gray-500">Domain: {team.domain || "Not specified"}</p>
-                <p className="text-sm text-gray-400">
-                  Members: {team.members?.length > 0 ? team.members.join(", ") : "No members"}
+                <h3 className="font-semibold text-lg">
+                  {team.name}
+                </h3>
+
+                <p className="text-sm text-gray-500">
+                  Domain: {team.domain}
+                </p>
+
+                <p className="text-sm text-gray-500">
+                  Members: {team.memberCount || 0}
                 </p>
               </div>
             ))}
           </div>
         )}
-      </section>
+      </div>
+
     </div>
   );
 });

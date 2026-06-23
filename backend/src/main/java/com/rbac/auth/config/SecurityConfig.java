@@ -20,65 +20,123 @@ public class SecurityConfig {
     @Autowired
     private JwtAuthenticationFilter jwtFilter;
 
-    // ✅ Password Encoder
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // ✅ CORS CONFIG (FIXED)
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
-        CorsConfiguration config = new CorsConfiguration();
+        CorsConfiguration config =
+                new CorsConfiguration();
 
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
+        config.setAllowedOrigins(
+                List.of("http://localhost:5173")
+        );
+
+        config.setAllowedMethods(
+                List.of(
+                        "GET",
+                        "POST",
+                        "PUT",
+                        "DELETE",
+                        "OPTIONS"
+                )
+        );
+
+        config.setAllowedHeaders(
+                List.of("*")
+        );
+
         config.setAllowCredentials(true);
 
-        // 🔥 IMPORTANT (fix preflight issues)
-        config.setExposedHeaders(List.of("Authorization"));
+        config.setExposedHeaders(
+                List.of("Authorization")
+        );
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
+        source.registerCorsConfiguration(
+                "/**",
+                config
+        );
 
         return source;
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http
+    ) throws Exception {
 
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf.disable())
+                .cors(cors ->
+                        cors.configurationSource(
+                                corsConfigurationSource()
+                        )
+                )
 
-            .authorizeHttpRequests(auth -> auth
+                .csrf(csrf -> csrf.disable())
 
-                // 🔥 VERY IMPORTANT (fix preflight errors)
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .authorizeHttpRequests(auth -> auth
 
-                // ✅ PUBLIC APIs
-                .requestMatchers(
-                        "/api/users/register",
-                        "/api/users/login",
-                        "/api/invite/accept",   // ✅ allow invite accept without login
-                        "/swagger-ui/**",
-                        "/swagger-ui.html",
-                        "/v3/api-docs/**"
-                ).permitAll()
+                        .requestMatchers(
+                                HttpMethod.OPTIONS,
+                                "/**"
+                        ).permitAll()
 
-                // ✅ ROLE BASED
-                .requestMatchers("/api/invite/send").hasRole("PROJECT_MANAGER")
-                .requestMatchers("/api/manager/**").hasRole("PROJECT_MANAGER")
-                .requestMatchers("/api/user/**").hasRole("USER")
+                        // Public
+                        .requestMatchers(
+                                "/api/users/register",
+                                "/api/users/login",
+                                "/api/invite/accept",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**",
 
-                .anyRequest().authenticated()
-            )
+                                // WebSocket
+                                "/ws/**"
+                        ).permitAll()
 
-            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                        .requestMatchers(
+                                "/api/chat/**"
+                        )
+                        .hasAnyRole(
+                                "PROJECT_MANAGER",
+                                "USER"
+                        )
 
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+                        .requestMatchers(
+                                "/api/invite/send"
+                        )
+                        .hasRole("PROJECT_MANAGER")
+
+                        .requestMatchers(
+                                "/api/manager/**"
+                        )
+                        .hasRole("PROJECT_MANAGER")
+
+                        .requestMatchers(
+                                "/api/user/**"
+                        )
+                        .hasRole("USER")
+
+                        .anyRequest()
+                        .authenticated()
+                )
+
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
+                        )
+                )
+
+                .addFilterBefore(
+                        jwtFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                );
 
         return http.build();
     }

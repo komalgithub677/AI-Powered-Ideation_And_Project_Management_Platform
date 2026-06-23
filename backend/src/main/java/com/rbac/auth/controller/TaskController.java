@@ -1,14 +1,14 @@
 package com.rbac.auth.controller;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.rbac.auth.dto.CreateTaskRequest;
 import com.rbac.auth.entity.Task;
 import com.rbac.auth.service.TaskService;
-import com.rbac.auth.dto.CreateTaskRequest;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api")
@@ -16,28 +16,39 @@ import java.util.List;
 public class TaskController {
 
     @Autowired
-    private TaskService service;
+    private TaskService taskService;
 
-    // ✅ FIXED (DTO instead of Map)
     @PostMapping("/manager/tasks")
-    public Task create(@RequestBody CreateTaskRequest req, Authentication auth) {
+    public Task createTask(
+            @RequestBody CreateTaskRequest request,
+            Authentication authentication) {
 
-        return service.createTask(
-                req.getTitle(),
-                req.getDescription(),
-                req.getAssignedTo(),
-                req.getTeamId(),
-                auth.getName()
+        return taskService.createTask(
+                request.getTitle(),
+                request.getDescription(),
+                request.getAssignedTo(),
+                request.getTeamId(),
+                authentication.getName()
         );
     }
 
     @GetMapping("/user/tasks")
-    public List<Task> get(Authentication auth) {
-        return service.getTasks(auth.getName());
+    public List<Task> getTasks(Authentication authentication) {
+
+        return taskService.getTasks(
+                authentication.getName()
+        );
     }
 
     @PutMapping("/user/tasks/{id}/complete")
-    public Task complete(@PathVariable Long id) {
-        return service.markComplete(id);
+    public Task completeTask(@PathVariable Long id) {
+
+        return taskService.markComplete(id);
+    }
+
+    @PostMapping("/manager/test")
+    public String testEndpoint() {
+
+        return "Task Controller Working";
     }
 }

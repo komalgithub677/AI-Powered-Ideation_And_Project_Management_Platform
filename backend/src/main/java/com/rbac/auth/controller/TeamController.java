@@ -1,15 +1,17 @@
 package com.rbac.auth.controller;
 
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.rbac.auth.dto.TeamResponse;
 import com.rbac.auth.entity.Team;
 import com.rbac.auth.entity.User;
+import com.rbac.auth.service.InvitationService;
 import com.rbac.auth.service.TeamService;
-
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/manager/teams")
@@ -17,25 +19,101 @@ import java.util.Map;
 public class TeamController {
 
     @Autowired
-    private TeamService service;
+    private TeamService teamService;
+
+    @Autowired
+    private InvitationService invitationService;
+
+    // =====================================
+    // CREATE TEAM + SEND INVITES
+    // =====================================
 
     @PostMapping
-    public Team create(@RequestBody Map<String, String> body, Authentication auth) {
-        return service.createTeam(
-                body.get("name"),
-                body.get("domain"),
+    public TeamResponse createTeam(
+            @RequestBody Map<String, Object> body,
+            Authentication auth
+    ) {
+
+        String name = (String) body.get("name");
+        String domain = (String) body.get("domain");
+
+        Team team = teamService.createTeam(
+                name,
+                domain,
                 auth.getName()
+        );
+
+        List<String> members =
+                (List<String>) body.get("members");
+
+        if (members != null) {
+
+            for (String email : members) {
+
+                try {
+
+                    invitationService.sendInvite(
+                            email,
+                            auth.getName(),
+                            team.getId()
+                    );
+
+                } catch (Exception e) {
+
+                    System.out.println(
+                            "Invite failed for "
+                                    + email
+                                    + " : "
+                                    + e.getMessage()
+                    );
+                }
+            }
+        }
+
+        return new TeamResponse(
+                team.getId(),
+                team.getName(),
+                team.getDomain(),
+                team.getMembers() == null
+                        ? 0
+                        : team.getMembers().size()
         );
     }
 
+    // =====================================
+    // GET ALL MANAGER TEAMS
+    // =====================================
+
     @GetMapping
-    public List<Team> get(Authentication auth) {
-        return service.getTeams(auth.getName());
+    public List<TeamResponse> getTeams(
+            Authentication auth
+    ) {
+
+        return teamService
+                .getTeams(auth.getName())
+                .stream()
+                .map(team -> new TeamResponse(
+                        team.getId(),
+                        team.getName(),
+                        team.getDomain(),
+                        team.getMembers() == null
+                                ? 0
+                                : team.getMembers().size()
+                ))
+                .toList();
     }
 
-    // ✅ GET MEMBERS
+    // =====================================
+    // GET TEAM MEMBERS
+    // =====================================
+
     @GetMapping("/{teamId}/members")
-    public List<User> getMembers(@PathVariable Long teamId) {
-        return service.getTeamById(teamId).getMembers();
+    public List<User> getMembers(
+            @PathVariable Long teamId
+    ) {
+
+        Team team = teamService.getTeamById(teamId);
+
+        return team.getMembers();
     }
 }

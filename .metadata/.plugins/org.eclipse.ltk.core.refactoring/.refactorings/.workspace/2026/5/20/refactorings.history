@@ -1,4 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<session version="1.0">
-<refactoring comment="Rename resource &apos;rbac-auth-system&apos; to &apos;backend&apos;" description="Rename resource &apos;rbac-auth-system&apos;" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="/rbac-auth-system" name="backend" stamp="1778925134931" updateReferences="true"/>
-</session>
