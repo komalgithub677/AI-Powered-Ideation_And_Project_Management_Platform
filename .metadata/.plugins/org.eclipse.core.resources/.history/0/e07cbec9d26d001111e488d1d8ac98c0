@@ -1,0 +1,41 @@
+package com.rbac.auth.entity;
+
+import jakarta.persistence.*;
+
+@Entity
+public class Invitation {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String email;
+    private String token;
+    private boolean accepted;
+    private boolean used;
+
+    @ManyToOne
+    private User manager;
+
+    // ✅ NEW (TEAM LINK)
+    @ManyToOne
+    private Team teams;
+
+    public boolean isAccepted() { return accepted; }
+    public void setAccepted(boolean accepted) { this.accepted = accepted; }
+
+    public boolean isUsed() { return used; }
+    public void setUsed(boolean used) { this.used = used; }
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+
+    public String getToken() { return token; }
+    public void setToken(String token) { this.token = token; }
+
+    public User getManager() { return manager; }
+    public void setManager(User manager) { this.manager = manager; }
+
+    public Team getTeam() { return team; }
+    public void setTeam(Team team) { this.team = team; }
+}

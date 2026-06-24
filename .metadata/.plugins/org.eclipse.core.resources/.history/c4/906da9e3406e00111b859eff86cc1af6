@@ -1,0 +1,65 @@
+package com.rbac.auth.controller;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import com.rbac.auth.dto.LoginRequest;
+import com.rbac.auth.dto.LoginResponse;
+import com.rbac.auth.dto.RegisterRequest;
+import com.rbac.auth.entity.User;
+import com.rbac.auth.repository.UserRepository;
+import com.rbac.auth.service.UserService;
+
+@RestController
+@RequestMapping("/api/users")
+@CrossOrigin(origins = "http://localhost:5173")
+public class UserController {
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    // ================= REGISTER =================
+
+    @PostMapping("/register")
+    public User register(@RequestBody RegisterRequest request) {
+        return userService.registerUser(request);
+    }
+
+    // ================= LOGIN =================
+
+    @PostMapping("/login")
+    public LoginResponse login(@RequestBody LoginRequest request) {
+        return userService.login(request);
+    }
+
+    // ================= PROFILE =================
+
+    @GetMapping("/profile")
+    public Map<String, Object> getProfile(
+            Authentication authentication) {
+
+        String email = authentication.getName();
+
+        User user = userRepository
+                .findByEmail(email)
+                .orElseThrow(() ->
+                        new RuntimeException("User not found"));
+
+        Map<String, Object> profile =
+                new HashMap<>();
+
+        profile.put("id", user.getId());
+        profile.put("name", user.getName());
+        profile.put("email", user.getEmail());
+        profile.put("role", user.getRole());
+
+        return profile;
+    }
+}

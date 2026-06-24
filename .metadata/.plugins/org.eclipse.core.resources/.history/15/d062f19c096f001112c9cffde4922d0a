@@ -1,0 +1,19 @@
+package com.rbac.auth.repository;
+
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.rbac.auth.entity.ChatMessage;
+
+public interface ChatMessageRepository
+        extends JpaRepository<ChatMessage, Long> {
+
+    List<ChatMessage>
+    findBySenderEmailAndReceiverEmailOrReceiverEmailAndSenderEmailOrderBySentAtAsc(
+            String sender,
+            String receiver,
+            String receiver2,
+            String sender2
+    );
+}

@@ -1,0 +1,5 @@
+package com.rbac.auth.repository;
+
+public class ChatMessageRepository {
+
+}

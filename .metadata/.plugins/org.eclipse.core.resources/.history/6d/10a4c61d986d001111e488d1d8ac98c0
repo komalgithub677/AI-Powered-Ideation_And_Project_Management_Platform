@@ -1,0 +1,62 @@
+package com.rbac.auth.controller;
+
+import com.rbac.auth.dto.CreateTeamRequest;
+import com.rbac.auth.entity.Team;
+import com.rbac.auth.entity.User;
+import com.rbac.auth.service.InvitationService;
+import com.rbac.auth.service.TeamService;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/manager/teams")
+@CrossOrigin(origins = "http://localhost:5173")
+public class TeamController {
+
+    @Autowired
+    private TeamService service;
+
+    @Autowired
+    private InvitationService invitationService;
+
+    @PostMapping
+    public Team create(
+            @RequestBody CreateTeamRequest request,
+            Authentication auth
+    ) {
+
+        Team team = service.createTeam(
+                request.getName(),
+                request.getDomain(),
+                auth.getName()
+        );
+
+        if (request.getMembers() != null) {
+
+            for (String email : request.getMembers()) {
+
+                invitationService.sendInvite(
+                        email,
+                        auth.getName(),
+                        team.getId()
+                );
+            }
+        }
+
+        return team;
+    }
+
+    @GetMapping
+    public List<Team> get(Authentication auth) {
+        return service.getTeams(auth.getName());
+    }
+
+    @GetMapping("/{teamId}/members")
+    public List<User> getMembers(@PathVariable Long teamId) {
+        return service.getTeamById(teamId).getMembers();
+    }
+}

@@ -1,0 +1,24 @@
+public Team getUserTeam(String email) {
+
+    User user = userRepository.findByEmail(email);
+
+    if (user == null) {
+        throw new RuntimeException("User not found");
+    }
+
+    List<Team> teams = teamRepository.findAll();
+
+    for (Team team : teams) {
+
+        if (team.getMembers()
+                .stream()
+                .anyMatch(member ->
+                        member.getId()
+                              .equals(user.getId()))) {
+
+            return team;
+        }
+    }
+
+    return null;
+}

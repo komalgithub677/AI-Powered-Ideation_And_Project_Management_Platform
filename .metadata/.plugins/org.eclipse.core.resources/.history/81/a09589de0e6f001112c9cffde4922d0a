@@ -1,0 +1,107 @@
+package com.rbac.auth.security;
+
+import java.io.IOException;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.rbac.auth.entity.User;
+import com.rbac.auth.repository.UserRepository;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+@Component
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    @Autowired
+    private JwtService jwtService;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Override
+    protected void doFilterInternal(
+            HttpServletRequest req,
+            HttpServletResponse res,
+            FilterChain chain)
+            throws ServletException, IOException {
+
+        System.out.println("\n========== JWT FILTER ==========");
+        System.out.println("URI: " + req.getRequestURI());
+
+        String header = req.getHeader("Authorization");
+
+        System.out.println("Authorization Header: " + header);
+
+        if (header != null
+                && header.startsWith("Bearer ")
+                && SecurityContextHolder.getContext().getAuthentication() == null) {
+
+            String token = header.substring(7);
+
+            System.out.println("Token Received: " + token);
+
+            boolean valid = jwtService.validateToken(token);
+
+            System.out.println("Token Valid: " + valid);
+
+            if (valid) {
+
+                String email = jwtService.extractEmail(token);
+
+                System.out.println("Email From Token: " + email);
+
+                User user = userRepository.findByEmail(email);
+
+                System.out.println("User Found: " + (user != null));
+
+                if (user != null) {
+
+                    System.out.println("DB Role: " + user.getRole());
+
+                    String role =
+                            "ROLE_" + user.getRole().name();
+
+                    System.out.println("Authority Created: " + role);
+
+                    UsernamePasswordAuthenticationToken auth =
+                            new UsernamePasswordAuthenticationToken(
+                                    email,
+                                    null,
+                                    List.of(
+                                            new SimpleGrantedAuthority(role)
+                                    )
+                            );
+
+                    auth.setDetails(
+                            new WebAuthenticationDetailsSource()
+                                    .buildDetails(req)
+                    );
+
+                    SecurityContextHolder
+                            .getContext()
+                            .setAuthentication(auth);
+
+                    System.out.println("Authentication Set Successfully");
+                } else {
+                    System.out.println("User NOT found in database");
+                }
+            } else {
+                System.out.println("JWT Validation Failed");
+            }
+        } else {
+            System.out.println("Authorization Header Missing or Invalid");
+        }
+
+        chain.doFilter(req, res);
+    }
+}

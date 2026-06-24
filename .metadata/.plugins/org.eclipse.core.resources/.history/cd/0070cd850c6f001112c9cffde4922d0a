@@ -1,0 +1,5 @@
+package com.rbac.auth.config;
+
+public class WebSocketConfig {
+
+}

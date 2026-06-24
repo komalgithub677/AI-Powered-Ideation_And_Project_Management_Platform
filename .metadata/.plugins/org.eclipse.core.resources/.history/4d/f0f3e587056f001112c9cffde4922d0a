@@ -1,0 +1,83 @@
+package com.rbac.auth.controller;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import com.rbac.auth.dto.CreateTaskRequest;
+import com.rbac.auth.entity.Task;
+import com.rbac.auth.service.TaskService;
+
+@RestController
+@RequestMapping("/api")
+@CrossOrigin(origins = "http://localhost:5173")
+public class TaskController {
+
+    @Autowired
+    private TaskService taskService;
+
+    // ================= CREATE TASK =================
+
+    @PostMapping(
+            value = "/manager/tasks",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public Task createTask(
+            @ModelAttribute CreateTaskRequest request,
+            Authentication authentication) {
+
+        System.out.println("\n===== TASK CREATE API HIT =====");
+        System.out.println("Title: " + request.getTitle());
+        System.out.println("Description: " + request.getDescription());
+        System.out.println("Assigned To: " + request.getAssignedTo());
+        System.out.println("Team Id: " + request.getTeamId());
+
+        if (request.getFile() != null) {
+            System.out.println("File Name: "
+                    + request.getFile().getOriginalFilename());
+        } else {
+            System.out.println("No File Uploaded");
+        }
+
+        return taskService.createTask(
+                request.getTitle(),
+                request.getDescription(),
+                request.getAssignedTo(),
+                request.getTeamId(),
+                request.getFile(),
+                authentication.getName()
+        );
+    }
+
+    // ================= GET USER TASKS =================
+
+    @GetMapping("/user/tasks")
+    public List<Task> getTasks(Authentication authentication) {
+
+        return taskService.getTasks(
+                authentication.getName()
+        );
+    }
+
+    // ================= COMPLETE TASK =================
+
+    @PutMapping("/user/tasks/{id}/complete")
+    public Task completeTask(@PathVariable Long id) {
+
+        return taskService.markComplete(id);
+    }
+
+    // ================= TEST ENDPOINT =================
+
+    @PostMapping("/manager/test")
+    public String testEndpoint() {
+
+        System.out.println("===== TEST ENDPOINT HIT =====");
+
+        return "Task Controller Working";
+    }
+}

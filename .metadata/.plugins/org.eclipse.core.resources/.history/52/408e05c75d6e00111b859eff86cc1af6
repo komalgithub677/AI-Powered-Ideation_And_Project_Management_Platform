@@ -1,0 +1,74 @@
+package com.rbac.auth.controller;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.rbac.auth.entity.Task;
+import com.rbac.auth.service.TaskService;
+
+@RestController
+@RequestMapping("/api")
+@CrossOrigin(origins = "http://localhost:5173")
+public class TaskController {
+
+    @Autowired
+    private TaskService taskService;
+
+    // ================= CREATE TASK =================
+
+    @PostMapping(
+        value = "/manager/tasks",
+        consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+        produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public Task createTask(
+            @RequestParam("title") String title,
+            @RequestParam("description") String description,
+            @RequestParam("assignedTo") String assignedTo,
+            @RequestParam("teamId") Long teamId,
+            @RequestPart(value = "file", required = false) MultipartFile file,
+            Authentication authentication) {
+
+        return taskService.createTask(
+                title,
+                description,
+                assignedTo,
+                teamId,
+                file,
+                authentication.getName()
+        );
+    }
+
+    // ================= GET LOGGED IN USER TASKS =================
+
+    @GetMapping("/user/tasks")
+    public List<Task> getUserTasks(Authentication authentication) {
+
+        return taskService.getTasks(
+                authentication.getName()
+        );
+    }
+
+    // ================= MARK TASK COMPLETED =================
+
+    @PutMapping("/user/tasks/{id}/complete")
+    public Task completeTask(@PathVariable Long id) {
+
+        return taskService.markComplete(id);
+    }
+
+    // ================= GET ALL TASKS (OPTIONAL) =================
+
+    @GetMapping("/manager/tasks")
+    public List<Task> getAllTasks(Authentication authentication) {
+
+        return taskService.getTasks(
+                authentication.getName()
+        );
+    }
+}

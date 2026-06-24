@@ -1,0 +1,173 @@
+package com.rbac.auth.service;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.rbac.auth.entity.Task;
+import com.rbac.auth.entity.Team;
+import com.rbac.auth.entity.User;
+import com.rbac.auth.repository.TaskRepository;
+import com.rbac.auth.repository.TeamRepository;
+import com.rbac.auth.repository.UserRepository;
+
+@Service
+public class TaskService {
+
+    @Autowired
+    private TaskRepository repo;
+
+    @Autowired
+    private UserRepository userRepo;
+
+    @Autowired
+    private TeamRepository teamRepo;
+
+    @Autowired
+    private NotificationService notificationService;
+
+    @Autowired
+    private EmailService emailService;
+
+    // ================= CREATE TASK =================
+
+    public Task createTask(
+            String title,
+            String desc,
+            String assignedEmail,
+            Long teamId,
+            MultipartFile file,
+            String creatorEmail) {
+
+        if (title == null || title.isBlank()) {
+            throw new RuntimeException("Title is required");
+        }
+
+        if (assignedEmail == null || assignedEmail.isBlank()) {
+            throw new RuntimeException("Assigned email is required");
+        }
+
+        if (teamId == null) {
+            throw new RuntimeException("Team is required");
+        }
+
+        User assignedUser = userRepo.findByEmail(assignedEmail);
+
+        if (assignedUser == null) {
+            throw new RuntimeException("Assigned user not found");
+        }
+
+        User creator = userRepo.findByEmail(creatorEmail);
+
+        if (creator == null) {
+            throw new RuntimeException("Creator not found");
+        }
+
+        Team team = teamRepo.findById(teamId)
+                .orElseThrow(() ->
+                        new RuntimeException("Team not found"));
+
+        Task task = new Task();
+
+        task.setTitle(title);
+        task.setDescription(desc);
+        task.setAssignedTo(assignedUser);
+        task.setCreatedBy(creator);
+        task.setTeam(team);
+
+        // ================= FILE UPLOAD =================
+
+        if (file != null && !file.isEmpty()) {
+
+            try {
+
+                String uploadDir = "uploads/tasks/";
+
+                Files.createDirectories(
+                        Paths.get(uploadDir));
+
+                String fileName =
+                        System.currentTimeMillis()
+                                + "_"
+                                + file.getOriginalFilename();
+
+                Path filePath =
+                        Paths.get(uploadDir + fileName);
+
+                Files.copy(
+                        file.getInputStream(),
+                        filePath);
+
+                task.setAttachmentName(
+                        file.getOriginalFilename());
+
+                task.setAttachmentPath(
+                        fileName);
+
+            } catch (IOException e) {
+
+                throw new RuntimeException(
+                        "Failed to upload file");
+            }
+        }
+
+        Task savedTask = repo.save(task);
+
+        // ================= NOTIFICATION =================
+
+        notificationService.create(
+                "📌 New Task Assigned: " + title,
+                assignedUser
+        );
+
+        // ================= EMAIL =================
+
+        try {
+
+            emailService.sendTaskAssignmentEmail(
+                    assignedUser.getEmail(),
+                    title,
+                    desc
+            );
+
+            System.out.println(
+                    "✅ Task assignment email sent");
+
+        } catch (Exception e) {
+
+            System.out.println(
+                    "❌ Email failed but task created");
+
+            e.printStackTrace();
+        }
+
+        return savedTask;
+    }
+
+    // ================= GET TASKS =================
+
+    public List<Task> getTasks(String email) {
+
+        return repo.findByAssignedToEmail(email);
+    }
+
+    // ================= COMPLETE TASK =================
+
+    public Task markComplete(Long id) {
+
+        Task task = repo.findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Task not found"));
+
+        task.setStatus("COMPLETED");
+
+        return repo.save(task);
+    }
+}

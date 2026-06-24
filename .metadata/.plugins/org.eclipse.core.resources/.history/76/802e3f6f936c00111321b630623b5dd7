@@ -1,0 +1,5 @@
+package com.rbac.auth.entity;
+
+public class ChatMessage {
+
+}

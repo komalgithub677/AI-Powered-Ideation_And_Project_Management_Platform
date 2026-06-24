@@ -1,0 +1,131 @@
+package com.rbac.auth.controller;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import com.rbac.auth.dto.TeamResponse;
+import com.rbac.auth.entity.Team;
+import com.rbac.auth.entity.User;
+import com.rbac.auth.service.InvitationService;
+import com.rbac.auth.service.NotificationService;
+import com.rbac.auth.service.TeamService;
+
+@RestController
+@RequestMapping("/api/manager/teams")
+@CrossOrigin(origins = "http://localhost:5173")
+public class TeamController {
+
+    @Autowired
+    private TeamService teamService;
+
+    @Autowired
+    private InvitationService invitationService;
+
+    @Autowired
+    private NotificationService notificationService;
+
+    // =====================================
+    // CREATE TEAM + SEND INVITES
+    // =====================================
+
+    @PostMapping
+    public TeamResponse createTeam(
+            @RequestBody Map<String, Object> body,
+            Authentication auth
+    ) {
+
+        String name = (String) body.get("name");
+        String domain = (String) body.get("domain");
+
+        Team team = teamService.createTeam(
+                name,
+                domain,
+                auth.getName()
+        );
+
+        List<String> members =
+                (List<String>) body.get("members");
+
+        if (members != null) {
+
+            for (String email : members) {
+
+                try {
+
+                    invitationService.sendInvite(
+                            email,
+                            auth.getName(),
+                            team.getId()
+                    );
+
+                    notificationService.createNotification(
+                            team.getManager(),
+                            "Invitation sent to "
+                                    + email
+                                    + " for team "
+                                    + team.getName()
+                    );
+
+                } catch (Exception e) {
+
+                    System.out.println(
+                            "Invite failed for "
+                                    + email
+                                    + " : "
+                                    + e.getMessage()
+                    );
+                }
+            }
+        }
+
+        return new TeamResponse(
+                team.getId(),
+                team.getName(),
+                team.getDomain(),
+                team.getMembers() == null
+                        ? 0
+                        : team.getMembers().size()
+        );
+    }
+
+    // =====================================
+    // GET ALL MANAGER TEAMS
+    // =====================================
+
+    @GetMapping
+    public List<TeamResponse> getTeams(
+            Authentication auth
+    ) {
+
+        return teamService
+                .getTeams(auth.getName())
+                .stream()
+                .map(team -> new TeamResponse(
+                        team.getId(),
+                        team.getName(),
+                        team.getDomain(),
+                        team.getMembers() == null
+                                ? 0
+                                : team.getMembers().size()
+                ))
+                .toList();
+    }
+
+    // =====================================
+    // GET TEAM MEMBERS
+    // =====================================
+
+    @GetMapping("/{teamId}/members")
+    public List<User> getMembers(
+            @PathVariable Long teamId
+    ) {
+
+        Team team = teamService.getTeamById(teamId);
+
+        return team.getMembers();
+    }
+}

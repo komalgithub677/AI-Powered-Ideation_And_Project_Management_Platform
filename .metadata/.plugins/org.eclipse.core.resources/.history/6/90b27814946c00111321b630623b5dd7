@@ -1,0 +1,5 @@
+package com.rbac.auth.controller;
+
+public class ChatController {
+
+}

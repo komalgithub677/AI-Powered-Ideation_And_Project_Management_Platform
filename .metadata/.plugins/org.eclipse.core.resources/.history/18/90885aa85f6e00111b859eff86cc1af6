@@ -1,0 +1,59 @@
+package com.rbac.auth.controller;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+import com.rbac.auth.dto.CreateTaskRequest;
+import com.rbac.auth.entity.Task;
+import com.rbac.auth.service.TaskService;
+
+@RestController
+@RequestMapping("/api")
+@CrossOrigin(origins = "http://localhost:5173")
+public class TaskController {
+
+    @Autowired
+    private TaskService taskService;
+
+    // ================= CREATE TASK =================
+
+    @PostMapping("/manager/tasks")
+    public Task createTask(
+            @ModelAttribute CreateTaskRequest request,
+            Authentication authentication) {
+
+        System.out.println("===== TASK CREATE API HIT =====");
+        System.out.println("Title: " + request.getTitle());
+        System.out.println("Assigned To: " + request.getAssignedTo());
+
+        return taskService.createTask(
+                request.getTitle(),
+                request.getDescription(),
+                request.getAssignedTo(),
+                request.getTeamId(),
+                request.getFile(),
+                authentication.getName()
+        );
+    }
+
+    // ================= USER TASKS =================
+
+    @GetMapping("/user/tasks")
+    public List<Task> getTasks(Authentication authentication) {
+
+        return taskService.getTasks(
+                authentication.getName()
+        );
+    }
+
+    // ================= COMPLETE TASK =================
+
+    @PutMapping("/user/tasks/{id}/complete")
+    public Task completeTask(@PathVariable Long id) {
+
+        return taskService.markComplete(id);
+    }
+}

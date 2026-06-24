@@ -1,0 +1,50 @@
+package com.rbac.auth.entity;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "teams")
+@JsonIgnoreProperties({
+        "hibernateLazyInitializer",
+        "handler"
+})
+public class Team {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+
+    private String domain;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "manager_id")
+    @JsonIgnore
+    private User manager;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "team_members",
+            joinColumns = @JoinColumn(name = "team_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    @JsonIgnoreProperties({
+            "password",
+            "managedTeams",
+            "assignedTasks",
+            "createdTasks",
+            "notifications",
+            "hibernateLazyInitializer",
+            "handler"
+    })
+    private List<User> members = new ArrayList<>();
+
+    // getters setters
+}
